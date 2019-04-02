@@ -14,21 +14,24 @@ public class SplashActivity extends AppCompatActivity {
 
         if (savedInstanceState == null) {
             Thread thread = new Thread() {
-            @Override
-            public void run() {
-                try {
-                    sleep(SPLASH_TIME);
-                    Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-                    startActivity(intent);
-                    finish();
+                @Override
+                public void run() {
+                    try {
+                        sleep(SPLASH_TIME);
+                        if(SplashActivity.this.hasWindowFocus()) {
+                            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+                            startActivity(intent);
+                            finish();
+                        }
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
-                catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-        thread.start();
+            };
+            thread.start();
         }
+
     }
 }
 
