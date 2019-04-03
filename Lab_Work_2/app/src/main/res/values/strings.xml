@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Lab_Work_2</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="text_view">Item Example</string>
+    <string name="help_text">Help text</string>
+    <string name="name">Name</string>
+</resources>
