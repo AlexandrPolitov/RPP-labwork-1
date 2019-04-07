@@ -1,44 +1,73 @@
 package com.lab_work;
 
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import java.util.List;
+
 
 public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHolder> {
 
-    private final static int SIZE_OF_LIST = 100;
+    private List<String> names;
+    private LayoutInflater inflater;
+    private ItemClickListener clickListener;
 
-    public RecyclerAdapter() {
+    RecyclerAdapter(Context context, List<String> names) {
+        this.inflater = LayoutInflater.from(context);
+        this.names = names;
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
         public TextView text;
         public ImageView icon;
+
         public ViewHolder(View itemView) {
             super(itemView);
             this.text = (TextView) itemView.findViewById(R.id.text);
             this.icon = (ImageView) itemView.findViewById(R.id.icon);
+
+            itemView.setOnClickListener(this);
+            }
+
+            @Override
+            public void onClick (View view){
+            if(clickListener != null)
+                clickListener.onItemClick(view, getAdapterPosition());
         }
+    }
+
+    String getName(int position) {
+        return names.get(position);
+    }
+
+    void setClickListener(ItemClickListener itemClickListener) {
+        this.clickListener = itemClickListener;
+    }
+
+    public interface ItemClickListener {
+        void onItemClick(View view, int position);
     }
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View layoutView = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item, parent, false);
-        return new ViewHolder(layoutView);
+        View view = inflater.inflate(R.layout.item, parent,
+                false);
+        return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         holder.icon.setImageResource(R.drawable.books);
-        holder.text.setText("Item Example");
+        String name = names.get(position);
+        holder.text.setText(name);
     }
 
     @Override
     public int getItemCount() {
-        return SIZE_OF_LIST;
+        return names.size();
     }
 }
