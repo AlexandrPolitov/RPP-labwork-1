@@ -1,59 +1,74 @@
 package com.lab_work;
 
+import retrofit2.Call;
+import java.util.List;
+import android.view.View;
+import android.os.Bundle;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import java.util.ArrayList;
+import android.widget.Toast;
+import android.content.Intent;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.view.View;
-import java.util.ArrayList;
-import android.os.Bundle;
-import android.content.Intent;
-
-// Ссылка на картинки
-// https://raw.githubusercontent.com/wesleywerner/ancient-tech/02decf875616dd9692b31658d92e64a20d99f816/src/images/tech/....
-
-// Ссылка на Json
-// https://raw.githubusercontent.com/wesleywerner/ancient-tech/02decf875616dd9692b31658d92e64a20d99f816/src/data/techs.ruleset.json
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity implements RecyclerAdapter.ItemClickListener {
 
-    public static RecyclerAdapter listAdapter;
+    private static final String URL_JSON = "https://raw.githubusercontent.com";
+    private NetInterface netInterface;
+    private Retrofit retrofit;
+    private ArrayList<CivilizationItem> items = new ArrayList<>();
+    private static RecyclerAdapter listAdapter;
     private RecyclerView recyclerView;
-    private ArrayList<String> names;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Создание и заполнение списка
         initRecycler();
     }
 
     @Override
     public void onItemClick(View view, int position) {
+        // Создание ViewPageActivity и передача туда списка и позиции нажатого элемента
         Intent intent = new Intent(MainActivity.this, ViewPageActivity.class);
+        intent.putExtra("list", items);
+        intent.putExtra("position", position);
         startActivity(intent);
+        ///////////////////////////////////////////////////////////////////////////////
     }
 
-    void initRecycler(){
-        names = new ArrayList<>();
-        names.add("Horse");
-        names.add("Cow");
-        names.add("Camel");
-        names.add("Sheep");
-        names.add("Goat");
-
+    void initRecycler() {
         recyclerView = (RecyclerView) findViewById(R.id.list_items);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-        listAdapter = new RecyclerAdapter(this, names);
+        listAdapter = new RecyclerAdapter(this, items);
         listAdapter.setClickListener(this);
-
         RecyclerView.ItemAnimator itemAnimator = new DefaultItemAnimator();
-
         recyclerView.setItemAnimator(itemAnimator);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setHasFixedSize(true);
         recyclerView.setAdapter(listAdapter);
+
+        retrofit = new Retrofit.Builder().baseUrl(URL_JSON)
+                .addConverterFactory(GsonConverterFactory.create()).build();
+        netInterface = retrofit.create(NetInterface.class);
+
+        netInterface.getData().enqueue(new Callback<List<CivilizationItem>>() {
+            @Override
+            public void onResponse(Call<List<CivilizationItem>> call, Response<List<CivilizationItem>> response) {
+                items.addAll(response.body());
+                items.remove(0);
+                recyclerView.getAdapter().notifyDataSetChanged();
+            }
+            @Override
+            public void onFailure(Call<List<CivilizationItem>> call, Throwable t) {
+                Toast.makeText(MainActivity.this, "Please, check your internet connection", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
