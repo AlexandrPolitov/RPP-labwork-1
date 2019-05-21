@@ -7,18 +7,16 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
-import java.util.ArrayList;
-import java.util.StringTokenizer;
-
 public class DbHelper extends SQLiteOpenHelper {
-    public static final int DATABASE_VERSION = 2;
+    public static final int DATABASE_VERSION = 1;
     public static final String DATABASE_NAME = "lab3DB";
     public static final String TABLE_STUDENTS = "students";
 
     public static final String KEY_ID = "id";
-  //  public static final String KEY_F = "f";
-    //public static final String KEY_I = "i";
-    //public static final String KEY_O = "o";
+    public static final String KEY_F = "f";
+    public static final String KEY_I = "i";
+    public static final String KEY_O = "o";
+    public static final String KEY_FIO = "fio";
     public static final String KEY_TIME = "time";
 
     public DbHelper(Context context) {
@@ -27,39 +25,78 @@ public class DbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase database){
-        database.execSQL("create table " + TABLE_STUDENTS + " ("
-                + KEY_ID + " integer primary key autoincrement,"
-                + "fio" + " text,"
-                + KEY_TIME + " text" + ");");
+        Log.e ("my", "onCreate");
+        if (DATABASE_VERSION == 1) {
+            database.execSQL("create table if not exists " + TABLE_STUDENTS + " ("
+                    + KEY_ID + " integer not null primary key autoincrement,"
+                    + KEY_FIO + " text,"
+                    + KEY_TIME + " text" + ");");
+        }
+        else {
+            database.execSQL("create table if not exists "  + TABLE_STUDENTS +" ("
+                    + KEY_ID + " integer not null primary key autoincrement,"
+                    + KEY_F + " text,"
+                    + KEY_I + " text,"
+                    + KEY_O + " text,"
+                    + KEY_TIME + " text" + ");");
+        }
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
-       /* String oldTable = "TempOldTable";
-        database.execSQL( "alter table " + TABLE_STUDENTS + " rename to " + oldTable + " ;");
-        onCreate(database);
-
-        Cursor cursor = database.query(oldTable, null, null, null, null, null, null);
-        ArrayList<String> names = new ArrayList<>();
-        ArrayList<String> times = new ArrayList<>();
-        int fioIndex = cursor.getColumnIndex("fio");
-        int timeIndex = cursor.getColumnIndex(KEY_TIME);
-
-        if (cursor.moveToFirst()) {
-            do {
-                names.add(cursor.getString(fioIndex));
-                times.add(cursor.getString(timeIndex));
-            } while (cursor.moveToNext());
+        if (oldVersion == 1 && newVersion > oldVersion){
+            Log.e ("my", "onUpgrade");
+            database.execSQL("create table if not exists tmp ("
+                    + KEY_ID + " integer not null primary key autoincrement,"
+                    + KEY_F + " text,"
+                    + KEY_I + " text,"
+                    + KEY_O + " text,"
+                    + KEY_TIME + " text" + ");");
+            Cursor c = database.rawQuery("select id, fio, time from " + TABLE_STUDENTS, null);
+            ContentValues cv = new ContentValues();
+            if (c.moveToFirst()){
+                do {
+                    cv.clear();
+                    cv.put("id", c.getInt(0));
+                    String FIO = c.getString(1);
+                    cv.put("f", FIO.substring(0, FIO.indexOf(' ')));
+                    cv.put("i", FIO.substring(FIO.indexOf(' ')+1, FIO.substring(FIO.indexOf(' ')+1).indexOf(' ') + FIO.indexOf(' ')+1));
+                    cv.put("o", FIO.substring(FIO.substring(FIO.indexOf(' ')+1).indexOf(' ') + FIO.indexOf(' ')+2));
+                    cv.put("Time", c.getString(2));
+                    database.insert("tmp", null, cv);
+                }while (c.moveToNext());
+            }
+            database.execSQL("drop table if exists " + TABLE_STUDENTS);
+            database.execSQL("alter table tmp rename to "  + TABLE_STUDENTS);
+            c.close();
         }
-        cursor.close();
-        ContentValues contentValues = new ContentValues();
-        for (int i = 0; i < names.size(); i++) {
-            StringTokenizer tokenizer = new StringTokenizer(names.get(i));
-            contentValues.put(KEY_F, tokenizer.hasMoreTokens() ? tokenizer.nextToken() : "");
-            contentValues.put(KEY_I, tokenizer.hasMoreTokens() ? tokenizer.nextToken() : "");
-            contentValues.put(KEY_O, tokenizer.hasMoreTokens() ? tokenizer.nextToken() : "");
-            contentValues.put(KEY_TIME, times.get(i));
-            database.insert(TABLE_STUDENTS, null, contentValues);
-        }*/
+    }
+
+    @Override
+    public void onDowngrade(SQLiteDatabase database, int oldVersion, int newVersion) {
+        Log.i ("my", "onDowngrade");
+        if (oldVersion == 2 && newVersion == 1){
+            oldVersion++;
+            database.execSQL("create table if not exists tmp ("
+                    + KEY_ID + " integer not null primary key autoincrement,"
+                    + KEY_FIO + " text,"
+                    + KEY_TIME + " text" + ");");
+            Cursor c = database.rawQuery("select id, f, i, o, time from students", null);
+            ContentValues cv = new ContentValues();
+            if (c.moveToFirst()){
+                do {
+                    cv.clear();
+                    cv.put("id", c.getInt(0));
+                    String FIO = c.getString(1) + " " + c.getString(2)  + " " +  c.getString(3);
+                    cv.put("fio", FIO);
+                    cv.put("time", c.getString(4));
+                    database.insert("Students2", null, cv);
+                }while (c.moveToNext());
+            }
+
+            database.execSQL("drop table if exists " + TABLE_STUDENTS);
+            database.execSQL("alter table tmp rename to "  + TABLE_STUDENTS);
+            c.close();
+        }
     }
 }
