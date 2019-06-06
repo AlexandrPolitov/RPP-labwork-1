@@ -6,27 +6,32 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.support.constraint.ConstraintLayout;
 import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
-import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 
 public class ConfigActivity extends Activity {
-    private static final String PREFS_NAME = "com.sd.lab4.CountdownW";
+    private static final String PREFS_NAME = "com.example.lab_work_4";
     private static final String PREF_PREFIX_KEY = "appwidget_";
     private int mAppWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
     private final Calendar mCalendar = Calendar.getInstance();
-    private EditText dateTv;
+    private ConstraintLayout dateTv;
+    private TextView textView;
+    private String tmpDate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.config);
-        setTitle("Configure Widget");
+        setTitle("Установка времени");
 
         Intent intent = getIntent();
         Bundle extras = intent.getExtras();
@@ -44,7 +49,8 @@ public class ConfigActivity extends Activity {
         }
 
         dateTv = findViewById(R.id.date);
-        dateTv.setText(loadDatePref(ConfigActivity.this, mAppWidgetId));
+        textView = findViewById(R.id.textView);
+        tmpDate = loadDatePref(ConfigActivity.this, mAppWidgetId);
 
         final DatePickerDialog.OnDateSetListener date = new DatePickerDialog.OnDateSetListener() {
             @Override
@@ -79,13 +85,17 @@ public class ConfigActivity extends Activity {
 
                 if (!mCalendar.before(today)) {
                     final Context context = ConfigActivity.this;
-                    saveDatePref(context, mAppWidgetId, dateTv.getText().toString(), false, false);
+                    saveDatePref(context, mAppWidgetId, tmpDate, false, false);
                     AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
                     MyWidget.updateAppWidget(context, appWidgetManager, mAppWidgetId);
                     Intent resultValue = new Intent();
                     resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
                     setResult(RESULT_OK, resultValue);
                     finish();
+                } else {
+                    Toast toast = Toast.makeText(getApplicationContext(),
+                            "Java может многое, но отправлять уведомление в прошлое... это уж слишком!", Toast.LENGTH_LONG);
+                    toast.show();
                 }
             }
         });
@@ -101,16 +111,16 @@ public class ConfigActivity extends Activity {
     private void updateLabel() {
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
 
-        dateTv.setText(sdf.format(mCalendar.getTime()));
+        tmpDate = sdf.format(mCalendar.getTime());
+        textView.setText(tmpDate);
     }
 
     private void setCalValue() {
-        if (!dateTv.getText().toString().equals("")) {
+        if (!tmpDate.equals("")) {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
             try {
-                mCalendar.setTime(sdf.parse(dateTv.getText().toString()));
+                mCalendar.setTime(sdf.parse(tmpDate));
             } catch (ParseException e) {
-                // Invalid date in text view
                 e.printStackTrace();
             }
         }

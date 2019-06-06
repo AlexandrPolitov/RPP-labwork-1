@@ -20,16 +20,15 @@ import android.graphics.Color;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
-import android.util.Log;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
 
 public class MyWidget extends AppWidgetProvider {
-    public static final String ACTION_SCHEDULED_ALARM ="com.example.lab_work_4.SCHEDULED_ALARM";
-    private static final String ACTION_SCHEDULED_UPDATE ="com.example.lab_work_4.SCHEDULED_UPDATE";
-    private static final String TAG = "MyWidget.java";
-    private static final int DAY = (24 * 60 * 60 * 1000);
+    public static final String ACTION_ALARM ="com.example.lab_work_4.SCHEDULED_ALARM";
+    private static final String ACTION_UPDATE ="com.example.lab_work_4.SCHEDULED_UPDATE";
+    private static final int DAY = 86400000;
     private static boolean restartFlag = false;
+    private static int hourOfNotification = 9;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -39,13 +38,12 @@ public class MyWidget extends AppWidgetProvider {
                     restartFlag = true;
                 case Intent.ACTION_TIMEZONE_CHANGED:
                 case Intent.ACTION_TIME_CHANGED:
-                case ACTION_SCHEDULED_UPDATE:
+                case ACTION_UPDATE:
                     AppWidgetManager manager = AppWidgetManager.getInstance(context);
                     int[] ids = manager.getAppWidgetIds(getComponentName(context));
-                    Log.i(TAG,"Size:" + ids.length);
                     onUpdate(context, manager, ids);
                     break;
-                case ACTION_SCHEDULED_ALARM:
+                case ACTION_ALARM:
                     AppWidgetManager manager1 = AppWidgetManager.getInstance(context);
                     int id = (manager1.getAppWidgetIds(getComponentName(context)))[0];
                     ConfigActivity.setNotificationShown(context,id,true);
@@ -73,16 +71,20 @@ public class MyWidget extends AppWidgetProvider {
     private static NotificationChannel createNotificationChannel(String CHANNEL_ID) {
         NotificationChannel mChannel = new NotificationChannel(
                 CHANNEL_ID,
-                "Widget Alarms",
+                "Уведомление",
                 NotificationManager.IMPORTANCE_DEFAULT);
-        mChannel.setDescription("Shows alarms from countdown widgets");
         mChannel.enableLights(true);
         mChannel.setLightColor(Color.YELLOW);
         mChannel.enableVibration(true);
         mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
         mChannel.setShowBadge(false);
-
         return mChannel;
+    }
+
+    private static String Days(int count) {
+       if (count%10 > 1 && count%10 <= 4 && (count%100 <= 11 || count%100 > 14)) return " дня";
+       else if (count%10 == 1 && count%100 != 11) return " день";
+       else return " дней";
     }
 
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
@@ -92,7 +94,7 @@ public class MyWidget extends AppWidgetProvider {
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent,PendingIntent.FLAG_UPDATE_CURRENT);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget);
-        views.setOnClickPendingIntent(R.id.content,pendingIntent);
+        views.setOnClickPendingIntent(R.id.content, pendingIntent);
 
         if (!ConfigActivity.isDone(context,appWidgetId)) {
             Calendar calendar = Calendar.getInstance();
@@ -111,30 +113,23 @@ public class MyWidget extends AppWidgetProvider {
             double diffInDays = (double) (timeInMilliseconds - calendar.getTimeInMillis()) / DAY;
 
             int daysLeftCeil = (int) Math.ceil(diffInDays);
-            views.setTextViewText(R.id.widget, String.valueOf(Math.max(0, daysLeftCeil)));
+            views.setTextViewText(R.id.widget, Math.max(0, daysLeftCeil) + Days(daysLeftCeil));
 
             if (daysLeftCeil == 0) {
-                scheduleAlarm(context, appWidgetId);
+                Alarm(context, appWidgetId);
                 ConfigActivity.setDone(context, appWidgetId, true);
-
             } else if (diffInDays > 0) {
-                if (diffInDays < 100) {
-                    views.setTextViewTextSize(R.id.widget, TypedValue.COMPLEX_UNIT_SP, 50);
-                    views.setViewPadding(R.id.widget, 0, 0, 0, 0);
-
-                } else {
-                    int bottomMargin = (int) context.getResources().getDimension(R.dimen.counter_text_view_bottom_margin);
-                    views.setTextViewTextSize(R.id.widget, TypedValue.COMPLEX_UNIT_SP, 50);
-                    views.setViewPadding(R.id.widget, 0, 0, 0, bottomMargin);
-                }
-                scheduleNextUpdate(context, appWidgetId);
+                views.setTextViewTextSize(R.id.widget, TypedValue.COMPLEX_UNIT_SP, 30);
+                views.setViewPadding(R.id.widget, 0, 0, 0, 0);
+                NextUpdate(context, appWidgetId);
             }
+
         } else {
-            views.setTextViewText(R.id.widget, String.valueOf(0));
+            views.setTextViewText(R.id.widget, "-");
 
             boolean alarmShown = ConfigActivity.wasNotificationShown(context, appWidgetId);
             if (restartFlag && !alarmShown) {
-                scheduleAlarm(context, appWidgetId);
+                Alarm(context, appWidgetId);
                 restartFlag = false;
             }
         }
@@ -142,31 +137,27 @@ public class MyWidget extends AppWidgetProvider {
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
-    private static void scheduleNextUpdate(Context context, int appWidgetId) {
+    private static void NextUpdate(Context context, int appWidgetId) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
-        Intent intent = new Intent(context, MyWidget.class).setAction(ACTION_SCHEDULED_UPDATE);
+        Intent intent = new Intent(context, MyWidget.class).setAction(ACTION_UPDATE);
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
 
         long midnightTime = getTimeTillHour(0) + DAY;
-        Log.i(TAG, "Update for W:(" + appWidgetId + ") at, in ms : " + midnightTime);
         alarmManager.cancel(pendingIntent);
         alarmManager.set(AlarmManager.RTC, midnightTime, pendingIntent);
     }
 
-    private static void scheduleAlarm(Context context, int appWidgetId) {
+    private static void Alarm(Context context, int appWidgetId) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
-        Intent intent = new Intent(context, MyWidget.class).setAction(ACTION_SCHEDULED_ALARM);
+        Intent intent = new Intent(context, MyWidget.class).setAction(ACTION_ALARM);
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
-
-        // Remove any previous pending intent.
         alarmManager.cancel(pendingIntent);
 
-        long alarmTime = getTimeTillHour(9); // till 9:00 AM
-        Log.i(TAG, "Alarm for W:(" + appWidgetId + ") at, in ms : " + alarmTime);
+        long alarmTime = getTimeTillHour(hourOfNotification);
 
         alarmManager.setExact(AlarmManager.RTC_WAKEUP, alarmTime, pendingIntent);
     }
@@ -190,9 +181,9 @@ public class MyWidget extends AppWidgetProvider {
         NotificationCompat.Builder mBuilder =   new NotificationCompat.Builder(context,CHANNEL_ID)
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setWhen(System.currentTimeMillis())
-                .setSmallIcon(R.drawable.ic_event)
-                .setContentTitle("Scheduled event is today!")
-                .setContentIntent(PendingIntent.getActivity(context, 0, new Intent(), 0)) // clear notification after click
+                .setSmallIcon(R.drawable.icon)
+                .setContentTitle("Сегодня день магии Java!")
+                .setContentIntent(PendingIntent.getActivity(context, 0, new Intent(), 0))
                 .setAutoCancel(true);
 
         mNotificationManager.notify(1, mBuilder.build());
