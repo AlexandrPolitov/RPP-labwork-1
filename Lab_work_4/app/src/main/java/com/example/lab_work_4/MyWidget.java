@@ -5,7 +5,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
-
 import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -51,9 +50,9 @@ public class MyWidget extends AppWidgetProvider {
                     break;
             }
         }
-
         super.onReceive(context,intent);
     }
+
     @Override
     public void onDeleted(Context context, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
@@ -74,7 +73,7 @@ public class MyWidget extends AppWidgetProvider {
                 "Уведомление",
                 NotificationManager.IMPORTANCE_DEFAULT);
         mChannel.enableLights(true);
-        mChannel.setLightColor(Color.YELLOW);
+        mChannel.setLightColor(Color.GREEN);
         mChannel.enableVibration(true);
         mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
         mChannel.setShowBadge(false);
@@ -178,7 +177,7 @@ public class MyWidget extends AppWidgetProvider {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             mNotificationManager.createNotificationChannel( createNotificationChannel(CHANNEL_ID) );
         }
-        NotificationCompat.Builder mBuilder =   new NotificationCompat.Builder(context,CHANNEL_ID)
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context,CHANNEL_ID)
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setWhen(System.currentTimeMillis())
                 .setSmallIcon(R.drawable.icon)
